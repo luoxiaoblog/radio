@@ -6,12 +6,28 @@ class Radio {
   value: any;
   disabled: boolean;
   radioTemplate: string;
+  element: any;
 
   constructor(label: string, value: any, disabled: boolean, radioTemplate: string) {
     this.label = label;
     this.value = value;
     this.disabled = disabled;
-    this.radioTemplate = radioTemplate;
+    this.radioTemplate = radioTemplate ||  `
+    <label role="radio" class="lyj-radio">
+      <span class="lyj-radio__input">
+        <span class="lyj-radio__inner"></span>
+        <input type="radio" aria-hidden="true" tabindex="-1" class="lyj-radio__original" value="1">
+      </span>
+      <span class="lyj-radio__label"></span>
+    </label>
+    `;
+    this.element = this.createElement();
+  }
+
+  createElement() {
+    return $(this.radioTemplate).find('input[type=radio]').attr('value', this.value)
+          .end().find('.lyj-radio__label').text(this.label)
+          .end();
   }
 }
 
@@ -19,7 +35,6 @@ interface IRadioGroupOptions {
   name?: string;
   value?: any;
   radioGroup?: Radio[];
-  radioTemplate?: string;
   disabled?: boolean;
 }
 
@@ -28,15 +43,16 @@ class RadioGroup {
   value: any;
   radioGroup: Radio[];
   disabled: boolean;
-  radioTemplate: string;
   element: any;
+  checkedClass: string = 'is-checked';
 
   constructor(element: any, options: IRadioGroupOptions) {
     this.name = options.name;
     this.value = options.value;
-    this.radioGroup = options.radioGroup;
+    this.radioGroup = options.radioGroup.map((item: any, i) => {
+      return new Radio(item.label, item.value, item.disabled, item.radioTemplate);
+    });
     this.disabled = options.disabled;
-    this.radioTemplate = options.radioTemplate;
     this.element = this.createElement(element);
     this.initEvent();
   }
@@ -44,9 +60,12 @@ class RadioGroup {
   createElement(element: any): Element {
     let obj = $(element).addClass('lyj-radio-group');
     this.radioGroup.forEach((item: Radio, i: number) => {
-      $(this.radioTemplate).find('input[type=radio]').attr('value', item.value)
-                            .end().find('.lyj-radio__label').text(item.label)
-                            .end().appendTo(obj);
+      if (this.value === item.value) {
+        item.element.addClass(this.checkedClass)
+                    .find('.lyj-radio__input')
+                    .addClass(this.checkedClass);
+      }
+      obj.append(item.element);
     });
     return obj[0];
   }
@@ -71,14 +90,5 @@ $.fn.extend({
 
 
 let defaluts: IRadioGroupOptions = {
-  disabled: false,
-  radioTemplate: `
-  <label role="radio" class="lyj-radio">
-    <span class="lyj-radio__input">
-      <span class="lyj-radio__inner"></span>
-      <input type="radio" aria-hidden="true" tabindex="-1" class="lyj-radio__original" value="1">
-    </span>
-    <span class="lyj-radio__label"></span>
-  </label>
-  `
+  disabled: false
 }
