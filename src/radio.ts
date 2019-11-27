@@ -1,17 +1,25 @@
 declare var $: any;
 
 
+interface IRadioGroupOptions {
+  name?: string;
+  value?: any;
+  radioGroup?: Radio[];
+  disabled?: boolean;
+  changeHandler?: Function;
+}
+
 class Radio {
   label: string;
   value: any;
-  disabled: boolean;
   radioTemplate: string;
   element: any;
+  name: string;
 
-  constructor(label: string, value: any, disabled: boolean, radioTemplate: string) {
+  constructor(name: string, label: string, value: any, radioTemplate?: string) {
+    this.name = name;
     this.label = label;
     this.value = value;
-    this.disabled = disabled;
     this.radioTemplate = radioTemplate ||  `
     <label role="radio" class="lyj-radio">
       <span class="lyj-radio__input">
@@ -22,56 +30,109 @@ class Radio {
     </label>
     `;
     this.element = this.createElement();
+    this.initEvent();
   }
 
   createElement() {
-    return $(this.radioTemplate).find('input[type=radio]').attr('value', this.value)
+    return $(this.radioTemplate).find('input[type=radio]').attr('value', this.value).attr('name', this.name)
           .end().find('.lyj-radio__label').text(this.label)
           .end();
   }
-}
 
-interface IRadioGroupOptions {
-  name?: string;
-  value?: any;
-  radioGroup?: Radio[];
-  disabled?: boolean;
+  initEvent() {
+    this.element.on('click', (e: Event) => {
+      e.stopPropagation()
+      e.preventDefault()
+      this.element.trigger('check', this)
+    })
+  }
+
+  check(isCheck: boolean, checkedClass: string) {
+    this.element.toggleClass(checkedClass, isCheck)
+                .find('.lyj-radio__input')
+                .toggleClass(checkedClass, isCheck)
+                .find('input[type=radio]')
+                .prop('checked', isCheck)
+  }
+
 }
 
 class RadioGroup {
+  private _value: any;
+  private _disabled: boolean;
   name: string;
-  value: any;
   radioGroup: Radio[];
-  disabled: boolean;
   element: any;
+  changeHandler: Function;
   checkedClass: string = 'is-checked';
+  disabledClass: string = 'is-disabled';
 
   constructor(element: any, options: IRadioGroupOptions) {
     this.name = options.name;
-    this.value = options.value;
-    this.radioGroup = options.radioGroup.map((item: any, i) => {
-      return new Radio(item.label, item.value, item.disabled, item.radioTemplate);
+    this.radioGroup = options.radioGroup.map((item: any) => {
+      return new Radio(this.name, item.label, item.value, item.radioTemplate);
     });
-    this.disabled = options.disabled;
     this.element = this.createElement(element);
+    this.changeHandler = options.changeHandler || (() => {})
+    this.value = options.value;
+    this.disabled = options.disabled;
     this.initEvent();
   }
 
   createElement(element: any): Element {
     let obj = $(element).addClass('lyj-radio-group');
     this.radioGroup.forEach((item: Radio, i: number) => {
-      if (this.value === item.value) {
-        item.element.addClass(this.checkedClass)
-                    .find('.lyj-radio__input')
-                    .addClass(this.checkedClass);
-      }
       obj.append(item.element);
     });
-    return obj[0];
+    return obj;
   }
 
   initEvent(): void {
+    this.element.on('check', (event: Event, checkedRadio: Radio) => {
+      event.stopPropagation()
+      event.preventDefault()
+      if (this.disabled) return false;
+      console.log('checked:' + checkedRadio)
+      this.value = checkedRadio.value
+    })
+  }
 
+  radioStatusChange(): void {
+    this.radioGroup.forEach((radio: Radio) => {
+      radio.check(radio.value == this.value, this.checkedClass);
+    })
+  }
+
+  toggleDisabled() {
+    var radio = this.element.find('input[type=radio]');
+    this.element.toggleClass(this.disabledClass, this.disabled)
+                .find('.lyj-radio__input').toggleClass(this.disabledClass, this.disabled);
+    if (this.disabled) {
+      radio.attr('disabled', 'disabled');
+    } else {
+      radio.removeAttr('disabled');
+    }            
+  }
+
+  get value(): any {
+    return this._value;
+  }
+
+  set value(val: any) {
+    this._value = val;
+    if (val !== undefined) {
+      this.radioStatusChange();
+      this.changeHandler(this.value)
+    }  
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+
+  set disabled(val: boolean) {
+    this._disabled = val;
+    this.toggleDisabled();
   }
 }
 
