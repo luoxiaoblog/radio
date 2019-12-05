@@ -80,7 +80,7 @@ class RadioGroup {
   }
 
   createElement(element: any): Element {
-    let obj = $(element).addClass('lyj-radio-group');
+    let obj = $(element).addClass('lyj-radio-group').empty();
     this.radioGroup.forEach((item: Radio, i: number) => {
       obj.append(item.element);
     });
@@ -106,7 +106,8 @@ class RadioGroup {
   toggleDisabled() {
     var radio = this.element.find('input[type=radio]');
     this.element.toggleClass(this.disabledClass, this.disabled)
-                .find('.lyj-radio__input').toggleClass(this.disabledClass, this.disabled);
+                .find('.lyj-radio__input')
+                .toggleClass(this.disabledClass, this.disabled);
     if (this.disabled) {
       radio.attr('disabled', 'disabled');
     } else {
